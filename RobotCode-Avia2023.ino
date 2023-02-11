@@ -83,9 +83,21 @@ public:
       Mode::ModeManager.changeMode(StoppedMode);
     }
 
-    m_arcadeDriveModule.move(m_forwardChannel, m_yawChannel);
+    deaccelerationStatus(dt); // Can't go around 0 on the remoter always. (Fix: Change detect point to 20)
+    if(!m_deaccelerationStatus) //This will keep robot in deaccelerationStatus. breakTime will keep been reset!
+    {
+      m_arcadeDriveModule.move(m_forwardChannel, m_yawChannel);
+    }
+    else
+    {
+      if ((breakTime-=dt)<0)
+        {
+          m_deaccelerationStatus = false;
+        }
+    }
+
     m_liftModule.setSpeed(m_liftSpeed);
-    
+
     m_liftSpeed = 0;
     m_forwardChannel = 0;
     m_yawChannel = 0;
@@ -117,6 +129,16 @@ public:
     }
   }
 
+  void deaccelerationStatus(float dt)
+  {
+    if (m_forwardChannel <= 0 && m_forwardStatus == true)
+      {
+        breakTime = 0.5;
+        m_deaccelerationStatus = true;
+      }
+    m_forwardStatus = (m_forwardChannel>20)?true:false;
+  }
+
 private:
   ArcadeDriveModule m_arcadeDriveModule;
   MotorModule m_liftModule;
@@ -124,6 +146,9 @@ private:
   int8_t m_forwardChannel;
   int8_t m_yawChannel;
   int8_t m_liftSpeed;
+  bool m_forwardStatus= false;
+  bool m_deaccelerationStatus = false;
+  int8_t breakTime;
 };
 
 MainMode mainMode(&frontLeftMotor, &frontRightMotor, &backRightMotor, &backLeftMotor, &liftMotor);
