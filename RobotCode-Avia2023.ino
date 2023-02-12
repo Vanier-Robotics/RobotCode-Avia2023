@@ -70,6 +70,7 @@ public:
 
   void unload() override
   {
+    m_arcadeDriveModule.move(0, 0);
   }
 
   void update(float dt) override
@@ -83,20 +84,28 @@ public:
       Mode::ModeManager.changeMode(StoppedMode);
     }
 
-    deaccelerationStatus(dt); // (Detect point to 20)
-    if(!m_deaccelerationStatus) 
+    brakeStatus(60); // (Detect point to 60)
+
+    if(!m_isBraking) 
     {
       m_arcadeDriveModule.move(m_forwardChannel, m_yawChannel);
     }
     else
     {
-      if(m_forwardChannel>0){
+      if(m_forwardChannel > 0)
+      {
         m_arcadeDriveModule.move(m_forwardChannel, m_yawChannel);   
       }
-      if ((breakTime-=dt)<0)
-        {
-          m_deaccelerationStatus = false;
-        }
+      else
+      {
+        // not super smooth, but better than nothing...
+        m_arcadeDriveModule.move(20, m_yawChannel); 
+      }
+
+      if ((breakTime -= dt) < 0)
+      {
+        m_isBraking = false;
+      }
     }
 
     m_liftModule.setSpeed(m_liftSpeed);
@@ -132,14 +141,15 @@ public:
     }
   }
 
-  void deaccelerationStatus(float dt)
+  void brakeStatus(int8_t switchPoint)
   {
-    if (m_forwardChannel <= 20 && m_forwardStatus == true)
-      {
-        breakTime = 0.5;
-        m_deaccelerationStatus = true;
-      }
-    m_forwardStatus = (m_forwardChannel>20)?true:false;
+    if (m_forwardChannel <= switchPoint && m_isGoingForward)
+    {
+      breakTime = 0.3f;
+      m_isBraking = true;
+    }
+
+    m_isGoingForward = (m_forwardChannel > switchPoint);
   }
 
 private:
@@ -149,9 +159,9 @@ private:
   int8_t m_forwardChannel;
   int8_t m_yawChannel;
   int8_t m_liftSpeed;
-  bool m_forwardStatus= false;
-  bool m_deaccelerationStatus = false;
-  int8_t breakTime;
+  bool m_isGoingForward = false;
+  bool m_isBraking = false;
+  float breakTime;
 };
 
 MainMode mainMode(&frontLeftMotor, &frontRightMotor, &backRightMotor, &backLeftMotor, &liftMotor);
