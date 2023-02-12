@@ -5,12 +5,18 @@
 using namespace Crc;
 using namespace rou;
 
-PwmHandle frontLeftMotor(CRC_PWM_7);
+PwmHandle frontLeftMotor(CRC_PWM_5);
 PwmHandle frontRightMotor(CRC_PWM_6);
-PwmHandle backRightMotor(CRC_PWM_11);
-PwmHandle backLeftMotor(CRC_PWM_12);
+PwmHandle backRightMotor(CRC_PWM_7);
+PwmHandle backLeftMotor(CRC_PWM_8);
 
-PwmHandle liftMotor(CRC_PWM_5);
+PwmHandle liftMotor(CRC_PWM_4);
+PwmHandle clawMotor(CRC_PWM_9);
+
+PwmHandle clawServoRight(CRC_PWM_11);
+PwmHandle clawServoLeft(CRC_PWM_12);
+
+EncoderHandle clawEncoder(CRC_ENCO_A, CRC_ENCO_B);
 
 class IdleMode : public Mode
 {
@@ -59,7 +65,7 @@ public:
   {
     m_controller.analogBind(ANALOG::JOYSTICK1_Y, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setForwardChannel));
     m_controller.analogBind(ANALOG::JOYSTICK2_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setYawChannel));
-    m_controller.analogBind(ANALOG::JOYSTICK1_Y, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setStrafeChannel));
+    m_controller.analogBind(ANALOG::JOYSTICK1_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setStrafeChannel));
 
     m_controller.analogBind(ANALOG::GACHETTE_R, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftUp));
     m_controller.analogBind(ANALOG::GACHETTE_L, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftDown));
@@ -89,21 +95,21 @@ public:
 
     if(!m_isBraking) 
     {
-      m_holonomicDriveModule.move(m_forwardChannel, m_yawChannel, m_strafeChannel);
+      m_holonomicDriveModule.move(m_forwardChannel, m_strafeChannel, m_yawChannel);
     }
     else
     {
       if(m_forwardChannel > 0)
       { 
-        m_holonomicDriveModule.move(m_forwardChannel, m_yawChannel, m_strafeChannel);
+        m_holonomicDriveModule.move(m_forwardChannel, m_strafeChannel, m_yawChannel);
       }
       else
       {
         // not super smooth, but better than nothing...
-        m_holonomicDriveModule.move(20, m_yawChannel,m_strafeChannel); 
+        m_holonomicDriveModule.move(20, m_strafeChannel, m_yawChannel); 
       }
 
-      if ((breakTime -= dt) < 0)
+      if ((breakTime -= dt) <= 0.f)
       {
         m_isBraking = false;
       }
@@ -128,12 +134,12 @@ public:
 
   void setStrafeChannel(int8_t value)
   {
-    m_strafeChannel = static_cast<int8_t>(min(max(-static_cast<int16_t>(value), -128), 127));
+    m_strafeChannel = value;
   }
 
   void moveLiftUp(int8_t value)
   {
-    if (value>-120)
+    if (value > -120)
     {
       m_liftSpeed += 120;
     }
@@ -141,7 +147,7 @@ public:
 
   void moveLiftDown(int8_t value)
   {
-    if (value>-120)
+    if (value > -120)
     {
       m_liftSpeed -= 120;
     }
@@ -168,7 +174,7 @@ private:
   int8_t m_strafeChannel;
   bool m_isGoingForward = false;
   bool m_isBraking = false;
-  float breakTime;
+  float breakTime = 0.f;
 };
 
 MainMode mainMode(&frontLeftMotor, &frontRightMotor, &backRightMotor, &backLeftMotor, &liftMotor);
