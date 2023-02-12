@@ -58,10 +58,10 @@ public:
   , m_liftModule(liftMotor)
   {
     m_controller.analogBind(ANALOG::JOYSTICK1_Y, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setForwardChannel));
-    m_controller.analogBind(ANALOG::JOYSTICK1_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setYawChannel));
+    m_controller.analogBind(ANALOG::JOYSTICK2_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setYawChannel));
 
-    m_controller.digitalBind(BUTTON::R1, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::moveLiftUp));
-    m_controller.digitalBind(BUTTON::L1, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::moveLiftDown));
+    m_controller.analogBind(ANALOG::GACHETTE_R, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftUp));
+    m_controller.analogBind(ANALOG::GACHETTE_L, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftDown));
   }
 
   void load() override
@@ -125,17 +125,17 @@ public:
     m_yawChannel = static_cast<int8_t>(min(max(-static_cast<int16_t>(value), -128), 127));
   }
 
-  void moveLiftUp(bool isPressed)
+  void moveLiftUp(int8_t value)
   {
-    if (isPressed)
+    if (value>-120)
     {
       m_liftSpeed += 120;
     }
   }
 
-  void moveLiftDown(bool isPressed)
+  void moveLiftDown(int8_t value)
   {
-    if (isPressed)
+    if (value>-120)
     {
       m_liftSpeed -= 120;
     }
