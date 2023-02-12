@@ -54,11 +54,12 @@ public:
 
   MainMode(PwmHandle* frontLeftMotor, PwmHandle* frontRightMotor, PwmHandle* backRightMotor, PwmHandle* backLeftMotor,
     PwmHandle* liftMotor)
-  : m_arcadeDriveModule(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor)
+  : m_holonomicDriveModule(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor)
   , m_liftModule(liftMotor)
   {
     m_controller.analogBind(ANALOG::JOYSTICK1_Y, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setForwardChannel));
     m_controller.analogBind(ANALOG::JOYSTICK2_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setYawChannel));
+    m_controller.analogBind(ANALOG::JOYSTICK1_Y, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setStrafeChannel));
 
     m_controller.analogBind(ANALOG::GACHETTE_R, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftUp));
     m_controller.analogBind(ANALOG::GACHETTE_L, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftDown));
@@ -70,7 +71,7 @@ public:
 
   void unload() override
   {
-    m_arcadeDriveModule.move(0, 0);
+    m_holonomicDriveModule.move(0, 0, 0);
   }
 
   void update(float dt) override
@@ -88,18 +89,18 @@ public:
 
     if(!m_isBraking) 
     {
-      m_arcadeDriveModule.move(m_forwardChannel, m_yawChannel);
+      m_holonomicDriveModule.move(m_forwardChannel, m_yawChannel, m_strafeChannel);
     }
     else
     {
       if(m_forwardChannel > 0)
-      {
-        m_arcadeDriveModule.move(m_forwardChannel, m_yawChannel);   
+      { 
+        m_holonomicDriveModule.move(m_forwardChannel, m_yawChannel, m_strafeChannel);
       }
       else
       {
         // not super smooth, but better than nothing...
-        m_arcadeDriveModule.move(20, m_yawChannel); 
+        m_holonomicDriveModule.move(20, m_yawChannel,m_strafeChannel); 
       }
 
       if ((breakTime -= dt) < 0)
@@ -123,6 +124,11 @@ public:
   void setYawChannel(int8_t value)
   {
     m_yawChannel = static_cast<int8_t>(min(max(-static_cast<int16_t>(value), -128), 127));
+  }
+
+  void setStrafeChannel(int8_t value)
+  {
+    m_strafeChannel = static_cast<int8_t>(min(max(-static_cast<int16_t>(value), -128), 127));
   }
 
   void moveLiftUp(int8_t value)
@@ -153,12 +159,13 @@ public:
   }
 
 private:
-  ArcadeDriveModule m_arcadeDriveModule;
+  HolonomicDriveModule m_holonomicDriveModule;
   MotorModule m_liftModule;
 
   int8_t m_forwardChannel;
   int8_t m_yawChannel;
   int8_t m_liftSpeed;
+  int8_t m_strafeChannel;
   bool m_isGoingForward = false;
   bool m_isBraking = false;
   float breakTime;
