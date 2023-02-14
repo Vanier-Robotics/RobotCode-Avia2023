@@ -23,7 +23,7 @@ PwmHandle clawServoRight(CRC_PWM_11, 500, 2500);
 
 EncoderHandle clawEncoder(CRC_ENCO_A, CRC_ENCO_B);
 
-constexpr float CLAW_SPEED = 0.1f;
+constexpr float CLAW_SPEED = 2.0f;
 
 class IdleMode : public Mode
 {
@@ -59,8 +59,8 @@ public:
     {
       m_controller.update();
     }
-    m_leftClawModule.setSpeed(-100);
-    m_rightClawModule.setSpeed(55);
+    m_leftClawModule.setSpeed(0);
+    m_rightClawModule.setSpeed(20);
   }
 
 private:
@@ -72,12 +72,15 @@ class MainMode : public Mode
 {
 public:
   static Mode* StoppedMode;
-  static Mode* SlowDriveMode;
+  // static Mode* SlowDriveMode;
 
   MainMode(PwmHandle* frontLeftMotor, PwmHandle* frontRightMotor, PwmHandle* backRightMotor, PwmHandle* backLeftMotor,
     PwmHandle* liftMotor,PwmHandle* clawMotor,EncoderHandle* clawEncoder, PwmHandle* leftClaw, PwmHandle* rightClaw)
-  : m_arcadeDriveModule(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor)
-  , m_liftModule(liftMotor),m_clawModule(clawMotor), m_leftClawModule(leftClaw), m_rightClawModule(rightClaw)
+  : m_holonomicDriveModule(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor)
+  , m_liftModule(liftMotor)
+  , m_clawModule(clawMotor)
+  , m_leftClawModule(leftClaw)
+  , m_rightClawModule(rightClaw)
   {
     m_controller.digitalBind(BUTTON::START, nextMode); 
     m_controller.analogBind(ANALOG::JOYSTICK1_Y, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setForwardChannel));
@@ -97,7 +100,7 @@ public:
   {
     if (isPressed)
     {
-      Mode::ModeManager.changeMode(SlowDriveMode);
+      Mode::ModeManager.changeMode(StoppedMode);
     }
   }
 
@@ -112,7 +115,7 @@ public:
 
   void unload() override
   {
-    m_arcadeDriveModule.move(0, 0);
+    m_holonomicDriveModule.move(0, 0, 0);
   }
 
   void update(float dt) override
@@ -130,18 +133,18 @@ public:
 
     if(!m_isBraking) 
     {
-      m_arcadeDriveModule.move(m_forwardChannel, m_yawChannel);
+      m_holonomicDriveModule.move(m_forwardChannel, m_strafeChannel, m_yawChannel);
     }
     else
     {
       if(m_forwardChannel > 0)
       { 
-        m_arcadeDriveModule.move(m_forwardChannel, m_yawChannel);
+        m_holonomicDriveModule.move(m_forwardChannel, m_strafeChannel, m_yawChannel);
       }
       else
       {
         // not super smooth, but better than nothing...
-        m_arcadeDriveModule.move(20, m_yawChannel); 
+        m_holonomicDriveModule.move(20, m_strafeChannel, m_yawChannel); 
       }
 
       if ((breakTime -= dt) <= 0.f)
@@ -161,8 +164,6 @@ public:
     {
       m_clawPositionRight += dt * CLAW_SPEED;
       m_clawPositionLeft += dt * CLAW_SPEED;
-      m_leftClawModule.setSpeed(40);
-      m_rightClawModule.setSpeed(-90);
     }
 
     if (m_clawPositionRight < 0.0f) m_clawPositionRight = 0.0f;
@@ -171,8 +172,8 @@ public:
     if (m_clawPositionLeft < 0.0f) m_clawPositionLeft = 0.0f;
     else if (m_clawPositionLeft > 1.0f) m_clawPositionLeft = 1.0f;
 
-    m_leftClawModule.setSpeed(10 + static_cast<int8_t>(30 * m_clawPositionLeft));
-    m_rightClawModule.setSpeed(-60 - static_cast<int8_t>(30 * m_clawPositionRight));
+    m_leftClawModule.setSpeed(47 + static_cast<int8_t>(80.f * m_clawPositionLeft));
+    m_rightClawModule.setSpeed(-27 - static_cast<int8_t>(80.f * m_clawPositionRight));
 
     m_liftSpeed = 0;
     m_clawTurn = 0;
@@ -250,7 +251,7 @@ public:
   }
 
 private:
-  ArcadeDriveModule m_arcadeDriveModule;
+  HolonomicDriveModule m_holonomicDriveModule;
   MotorModule m_liftModule;
   MotorModule m_clawModule;
   MotorModule m_leftClawModule;
@@ -258,6 +259,7 @@ private:
 
   int8_t m_forwardChannel;
   int8_t m_yawChannel;
+  int8_t m_strafeChannel;
   int8_t m_liftSpeed;
   int8_t m_clawTurn;
   bool m_isGoingForward = false;
@@ -449,7 +451,7 @@ HandleManager handleManager;
 Mode* IdleMode::StartingMode = &mainMode;
 Mode* MainMode::StoppedMode = &idleMode;
 // Mode* MainMode::SlowDriveMode = &driftMode;
-Mode* MainMode::SlowDriveMode = &idleMode;
+// Mode* MainMode::SlowDriveMode = &idleMode;
 // Mode* DriftMode::StoppedMode = &idleMode;
 // Mode* DriftMode::DriveMode = &mainMode;
 ModeManager& Mode::ModeManager = modeManager;
