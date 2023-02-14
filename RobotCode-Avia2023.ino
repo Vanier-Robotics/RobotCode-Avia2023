@@ -89,8 +89,8 @@ public:
     m_controller.analogBind(ANALOG::GACHETTE_R, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftUp));
     m_controller.analogBind(ANALOG::GACHETTE_L, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftDown));
 
-    m_controller.digitalBind(BUTTON::L1, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::setClawCounterClockwise));
-    m_controller.digitalBind(BUTTON::R1, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::setClawClockwise));
+    m_controller.digitalBind(BUTTON::COLORS_RIGHT, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::setClawCounterClockwise));
+    m_controller.digitalBind(BUTTON::COLORS_LEFT, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::setClawClockwise));
 
     m_controller.digitalBind(BUTTON::COLORS_UP, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::openClaw));
     m_controller.digitalBind(BUTTON::COLORS_DOWN, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::closeClaw));
@@ -155,6 +155,7 @@ public:
 
     m_liftModule.setSpeed(m_liftSpeed);
     m_clawModule.setSpeed(m_clawTurn);
+
     if (m_openClaw)
     {
       m_clawPositionRight -= dt * CLAW_SPEED;
@@ -174,6 +175,8 @@ public:
 
     m_leftClawModule.setSpeed(47 + static_cast<int8_t>(80.f * m_clawPositionLeft));
     m_rightClawModule.setSpeed(-27 - static_cast<int8_t>(80.f * m_clawPositionRight));
+
+    Serial.println(clawEncoder.getPosition());
 
     m_liftSpeed = 0;
     m_clawTurn = 0;
@@ -195,9 +198,9 @@ public:
   {
     if(value)
     {
-      if(clawEncoder.getPosition()>0&&clawEncoder.getPosition()<400)
+      if(clawEncoder.getPosition() >= -100)
       {
-        m_clawTurn=-15;
+        m_clawTurn = -15;
       }
     }
   }
@@ -206,9 +209,9 @@ public:
   {
     if(value)
     {
-      if((clawEncoder.getPosition()>0)&&(clawEncoder.getPosition()<400))
+      if(clawEncoder.getPosition() <= 400)
       {
-        m_clawTurn=+15;
+        m_clawTurn = 15;
       }
     }
   }
