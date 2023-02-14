@@ -8,8 +8,8 @@ using namespace rou;
 PwmHandle frontLeftMotor(CRC_PWM_5);
 PwmHandle frontRightMotor(CRC_PWM_6);
 
-PwmHandle frontLeftMotorLow(CRC_PWM_5,0,1000);
-PwmHandle frontRightMotorLow(CRC_PWM_6,0,1000);
+PwmHandle frontLeftMotorLow(CRC_PWM_5,500,1000);
+PwmHandle frontRightMotorLow(CRC_PWM_6,500,1000);
 
 PwmHandle backRightMotor(CRC_PWM_7);
 PwmHandle backLeftMotor(CRC_PWM_8);
@@ -190,7 +190,7 @@ public:
     m_closeClaw = value;
   }
 
-    void setClawCounterClockwise(bool value)
+  void setClawCounterClockwise(bool value)
   {
     if(value)
     {
@@ -303,28 +303,6 @@ public:
     }
   }
 
-    void setClawCounterClockwise(bool value)
-  {
-    if(value)
-    {
-      if(clawEncoder.getPosition()>0&&clawEncoder.getPosition()<400)
-      {
-        m_clawTurn=-15;
-      }
-    }
-  }
-
-  void setClawClockwise(bool value)
-  {
-    if(value)
-    {
-      if((clawEncoder.getPosition()>0)&&(clawEncoder.getPosition()<400))
-      {
-        m_clawTurn=+15;
-      }
-    }
-  }
-
   void load() override
   {
     m_openClaw = false;
@@ -379,6 +357,28 @@ public:
     m_forwardChannel = 0;
     m_yawChannel = 0;
     m_clawTurn = 0;
+  }
+
+  void setClawCounterClockwise(bool value)
+  {
+    if(value)
+    {
+      if(clawEncoder.getPosition()>0&&clawEncoder.getPosition()<400)
+      {
+        m_clawTurn=-15;
+      }
+    }
+  }
+
+  void setClawClockwise(bool value)
+  {
+    if(value)
+    {
+      if((clawEncoder.getPosition()>0)&&(clawEncoder.getPosition()<400))
+      {
+        m_clawTurn=+15;
+      }
+    }
   }
 
   void setForwardChannel(int8_t value)
