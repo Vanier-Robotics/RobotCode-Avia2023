@@ -18,7 +18,7 @@ PwmHandle clawServoRight(CRC_PWM_11, 500, 2500);
 
 EncoderHandle clawEncoder(CRC_ENCO_A, CRC_ENCO_B);
 
-constexpr float CLAW_SPEED 0.1f;
+constexpr float CLAW_SPEED = 2.0f;
 
 class IdleMode : public Mode
 {
@@ -55,8 +55,8 @@ public:
       m_controller.update();
     }
 
-    m_leftClawModule.setSpeed(-100);
-    m_rightClawModule.setSpeed(55);
+    m_leftClawModule.setSpeed(0);
+    m_rightClawModule.setSpeed(20);
   }
 
 private:
@@ -147,8 +147,6 @@ public:
     {
       m_clawPositionRight += dt * CLAW_SPEED;
       m_clawPositionLeft += dt * CLAW_SPEED;
-      m_leftClawModule.setSpeed(40);
-      m_rightClawModule.setSpeed(-90);
     }
 
     if (m_clawPositionRight < 0.0f) m_clawPositionRight = 0.0f;
@@ -157,8 +155,8 @@ public:
     if (m_clawPositionLeft < 0.0f) m_clawPositionLeft = 0.0f;
     else if (m_clawPositionLeft > 1.0f) m_clawPositionLeft = 1.0f;
 
-    m_leftClawModule.setSpeed(10 + static_cast<int8_t>(30 * m_clawPositionLeft));
-    m_rightClawModule.setSpeed(-60 - static_cast<int8_t>(30 * m_clawPositionRight));
+    m_leftClawModule.setSpeed(47 + static_cast<int8_t>(80.f * m_clawPositionLeft));
+    m_rightClawModule.setSpeed(-27 - static_cast<int8_t>(80.f * m_clawPositionRight));
 
     m_liftSpeed = 0;
     m_forwardChannel = 0;
