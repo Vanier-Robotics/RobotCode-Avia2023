@@ -11,19 +11,23 @@ PwmHandle backRightMotor(CRC_PWM_7);
 PwmHandle backLeftMotor(CRC_PWM_8);
 
 PwmHandle liftMotor(CRC_PWM_4);
-PwmHandle clawMotor(CRC_PWM_9);
+PwmHandle clawMotor(CRC_PWM_10);
 
-PwmHandle clawServoRight(CRC_PWM_11);
-PwmHandle clawServoLeft(CRC_PWM_12);
+PwmHandle clawServoLeft(CRC_PWM_12, 500, 2500);
+PwmHandle clawServoRight(CRC_PWM_11, 500, 2500);
 
 EncoderHandle clawEncoder(CRC_ENCO_A, CRC_ENCO_B);
+
+constexpr float CLAW_SPEED 0.1f;
 
 class IdleMode : public Mode
 {
 public:
   static Mode* StartingMode;
 
-  IdleMode()
+  IdleMode(PwmHandle* clawServoLeft, PwmHandle* clawServoRight)
+  : m_leftClawModule(clawServoLeft)
+  , m_rightClawModule(clawServoRight)
   {
     m_controller.digitalBind(BUTTON::START, start); 
   }
@@ -50,7 +54,14 @@ public:
     {
       m_controller.update();
     }
+
+    m_leftClawModule.setSpeed(-100);
+    m_rightClawModule.setSpeed(55);
   }
+
+private:
+  MotorModule m_leftClawModule;
+  MotorModule m_rightClawModule;
 };
 
 class MainMode : public Mode
@@ -59,9 +70,11 @@ public:
   static Mode* StoppedMode;
 
   MainMode(PwmHandle* frontLeftMotor, PwmHandle* frontRightMotor, PwmHandle* backRightMotor, PwmHandle* backLeftMotor,
-    PwmHandle* liftMotor)
+    PwmHandle* liftMotor, PwmHandle* leftClaw, PwmHandle* rightClaw)
   : m_holonomicDriveModule(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor)
   , m_liftModule(liftMotor)
+  , m_leftClawModule(leftClaw)
+  , m_rightClawModule(rightClaw)
   {
     m_controller.analogBind(ANALOG::JOYSTICK1_Y, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setForwardChannel));
     m_controller.analogBind(ANALOG::JOYSTICK2_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setYawChannel));
@@ -69,10 +82,18 @@ public:
 
     m_controller.analogBind(ANALOG::GACHETTE_R, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftUp));
     m_controller.analogBind(ANALOG::GACHETTE_L, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftDown));
+
+    m_controller.digitalBind(BUTTON::COLORS_UP, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::openClaw));
+    m_controller.digitalBind(BUTTON::COLORS_DOWN, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::closeClaw));
   }
 
   void load() override
   {
+    m_openClaw = false;
+    m_closeClaw = false;
+
+    m_clawPositionRight = 0.0f;
+    m_clawPositionLeft = 0.0f;
   }
 
   void unload() override
@@ -117,6 +138,28 @@ public:
 
     m_liftModule.setSpeed(m_liftSpeed);
 
+    if (m_openClaw)
+    {
+      m_clawPositionRight -= dt * CLAW_SPEED;
+      m_clawPositionLeft -= dt * CLAW_SPEED;
+    }
+    if (m_closeClaw)
+    {
+      m_clawPositionRight += dt * CLAW_SPEED;
+      m_clawPositionLeft += dt * CLAW_SPEED;
+      m_leftClawModule.setSpeed(40);
+      m_rightClawModule.setSpeed(-90);
+    }
+
+    if (m_clawPositionRight < 0.0f) m_clawPositionRight = 0.0f;
+    else if (m_clawPositionRight > 1.0f) m_clawPositionRight = 1.0f;
+
+    if (m_clawPositionLeft < 0.0f) m_clawPositionLeft = 0.0f;
+    else if (m_clawPositionLeft > 1.0f) m_clawPositionLeft = 1.0f;
+
+    m_leftClawModule.setSpeed(10 + static_cast<int8_t>(30 * m_clawPositionLeft));
+    m_rightClawModule.setSpeed(-60 - static_cast<int8_t>(30 * m_clawPositionRight));
+
     m_liftSpeed = 0;
     m_forwardChannel = 0;
     m_yawChannel = 0;
@@ -153,6 +196,16 @@ public:
     }
   }
 
+  void openClaw(bool value)
+  {
+    m_openClaw = value;
+  }
+  
+  void closeClaw(bool value)
+  {
+    m_closeClaw = value;
+  }
+
   void brakeStatus(int8_t switchPoint)
   {
     if (m_forwardChannel <= switchPoint && m_isGoingForward)
@@ -167,6 +220,8 @@ public:
 private:
   HolonomicDriveModule m_holonomicDriveModule;
   MotorModule m_liftModule;
+  MotorModule m_leftClawModule;
+  MotorModule m_rightClawModule;
 
   int8_t m_forwardChannel;
   int8_t m_yawChannel;
@@ -175,10 +230,14 @@ private:
   bool m_isGoingForward = false;
   bool m_isBraking = false;
   float breakTime = 0.f;
+  bool m_openClaw;
+  bool m_closeClaw;
+  float m_clawPositionRight;
+  float m_clawPositionLeft;
 };
 
-MainMode mainMode(&frontLeftMotor, &frontRightMotor, &backRightMotor, &backLeftMotor, &liftMotor);
-IdleMode idleMode;
+MainMode mainMode(&frontLeftMotor, &frontRightMotor, &backRightMotor, &backLeftMotor, &liftMotor, &clawServoLeft, &clawServoRight);
+IdleMode idleMode(&clawServoLeft, &clawServoRight);
 ModeManager modeManager;
 HandleManager handleManager;
 
@@ -197,6 +256,9 @@ void setup() {
   handleManager.addHandle(&backRightMotor);
 
   handleManager.addHandle(&liftMotor);
+  handleManager.addHandle(&clawMotor);
+  handleManager.addHandle(&clawServoRight);
+  handleManager.addHandle(&clawServoLeft);
 
   modeManager.changeMode(&idleMode);
 
