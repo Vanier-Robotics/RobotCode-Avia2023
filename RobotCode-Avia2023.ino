@@ -70,9 +70,10 @@ public:
   static Mode* StoppedMode;
 
   MainMode(PwmHandle* frontLeftMotor, PwmHandle* frontRightMotor, PwmHandle* backRightMotor, PwmHandle* backLeftMotor,
-    PwmHandle* liftMotor, PwmHandle* leftClaw, PwmHandle* rightClaw)
+    PwmHandle* liftMotor, PwmHandle* leftClaw, PwmHandle* rightClaw, PwmHandle* claw)
   : m_holonomicDriveModule(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor)
   , m_liftModule(liftMotor)
+  , m_clawModule(claw)
   , m_leftClawModule(leftClaw)
   , m_rightClawModule(rightClaw)
   {
@@ -85,6 +86,8 @@ public:
 
     m_controller.digitalBind(BUTTON::COLORS_UP, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::openClaw));
     m_controller.digitalBind(BUTTON::COLORS_DOWN, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::closeClaw));
+    m_controller.digitalBind(BUTTON::COLORS_RIGHT, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::setClawCCW));
+    m_controller.digitalBind(BUTTON::COLORS_LEFT, aex::Function<void(bool)>::bind<MainMode>(*this, &MainMode::setClawCW));
   }
 
   void load() override
@@ -99,6 +102,7 @@ public:
   void unload() override
   {
     m_holonomicDriveModule.move(0, 0, 0);
+    m_clawModule.setSpeed(0);
   }
 
   void update(float dt) override
@@ -137,6 +141,7 @@ public:
     }
 
     m_liftModule.setSpeed(m_liftSpeed);
+    m_clawModule.setSpeed(m_clawRotation);
 
     if (m_openClaw)
     {
@@ -161,6 +166,7 @@ public:
     m_liftSpeed = 0;
     m_forwardChannel = 0;
     m_yawChannel = 0;
+    m_clawRotation = 0;
   }
 
   void setForwardChannel(int8_t value)
@@ -215,9 +221,32 @@ public:
     m_isGoingForward = (m_forwardChannel > switchPoint);
   }
 
+  void setClawCCW(bool value)
+  {
+    if (value)
+    {
+      if (clawEncoder.getPosition() > -100)
+      {
+        m_clawRotation = -60;
+      }
+    }
+  }
+
+  void setClawCW(bool value)
+  {
+    if (value)
+    {
+      if (clawEncoder.getPosition() < 400)
+      {
+        m_clawRotation = 60;
+      }
+    }
+  }
+
 private:
   HolonomicDriveModule m_holonomicDriveModule;
   MotorModule m_liftModule;
+  MotorModule m_clawModule;
   MotorModule m_leftClawModule;
   MotorModule m_rightClawModule;
 
@@ -232,9 +261,10 @@ private:
   bool m_closeClaw;
   float m_clawPositionRight;
   float m_clawPositionLeft;
+  int8_t m_clawRotation;
 };
 
-MainMode mainMode(&frontLeftMotor, &frontRightMotor, &backRightMotor, &backLeftMotor, &liftMotor, &clawServoLeft, &clawServoRight);
+MainMode mainMode(&frontLeftMotor, &frontRightMotor, &backRightMotor, &backLeftMotor, &liftMotor, &clawServoLeft, &clawServoRight, &clawMotor);
 IdleMode idleMode(&clawServoLeft, &clawServoRight);
 ModeManager modeManager;
 HandleManager handleManager;
