@@ -16,7 +16,7 @@ PwmHandle clawMotor(CRC_PWM_10);
 PwmHandle clawServoLeft(CRC_PWM_12, 500, 2500);
 PwmHandle clawServoRight(CRC_PWM_11, 500, 2500);
 
-EncoderHandle clawEncoder(CRC_ENCO_A, CRC_ENCO_B);
+//EncoderHandle clawEncoder(CRC_ENCO_A, CRC_ENCO_B);
 
 constexpr float CLAW_SPEED = 2.0f;
 
@@ -225,7 +225,7 @@ public:
   {
     if (value)
     {
-      if (clawEncoder.getPosition() > -100)
+      //if (clawEncoder.getPosition() > -100)
       {
         m_clawRotation = -60;
       }
@@ -236,7 +236,7 @@ public:
   {
     if (value)
     {
-      if (clawEncoder.getPosition() < 400)
+      //if (clawEncoder.getPosition() < 400)
       {
         m_clawRotation = 60;
       }
@@ -287,6 +287,8 @@ void setup() {
   handleManager.addHandle(&clawMotor);
   handleManager.addHandle(&clawServoRight);
   handleManager.addHandle(&clawServoLeft);
+
+  //handleManager.addHandle(&clawEncoder);
 
   modeManager.changeMode(&idleMode);
 
