@@ -20,6 +20,8 @@ PwmHandle clawServoRight(CRC_PWM_11, 500, 2500);
 
 constexpr float CLAW_SPEED = 2.0f;
 
+constexpr float CLAW_SPEED = 2.0f;
+
 class IdleMode : public Mode
 {
 public:
@@ -55,8 +57,10 @@ public:
       m_controller.update();
     }
 
+
     //m_leftClawModule.setSpeed(0);
     //m_rightClawModule.setSpeed(20);
+    
   }
 
 private:
@@ -160,8 +164,10 @@ public:
     if (m_clawPositionLeft < 0.0f) m_clawPositionLeft = 0.0f;
     else if (m_clawPositionLeft > 1.0f) m_clawPositionLeft = 1.0f;
 
+
     m_leftClawModule.setSpeed(-20 + static_cast<int8_t>(147.f * m_clawPositionLeft));
     m_rightClawModule.setSpeed(20 - static_cast<int8_t>(148.f * m_clawPositionRight));
+
 
     m_liftSpeed = 0;
     m_forwardChannel = 0;
@@ -225,6 +231,7 @@ public:
   {
     if (value)
     {
+
       //if (clawEncoder.getPosition() > -100)
       {
         m_clawRotation = -60;
@@ -289,7 +296,6 @@ void setup() {
   handleManager.addHandle(&clawMotor);
   handleManager.addHandle(&clawServoRight);
   handleManager.addHandle(&clawServoLeft);
-
   //handleManager.addHandle(&clawEncoder);
 
   modeManager.changeMode(&idleMode);
