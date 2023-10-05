@@ -16,7 +16,9 @@ PwmHandle clawMotor(CRC_PWM_10);
 PwmHandle clawServoLeft(CRC_PWM_12, 500, 2500);
 PwmHandle clawServoRight(CRC_PWM_11, 500, 2500);
 
-EncoderHandle clawEncoder(CRC_ENCO_A, CRC_ENCO_B);
+//EncoderHandle clawEncoder(CRC_ENCO_A, CRC_ENCO_B);
+
+constexpr float CLAW_SPEED = 2.0f;
 
 constexpr float CLAW_SPEED = 2.0f;
 
@@ -55,8 +57,10 @@ public:
       m_controller.update();
     }
 
-    m_leftClawModule.setSpeed(0);
-    m_rightClawModule.setSpeed(20);
+
+    //m_leftClawModule.setSpeed(0);
+    //m_rightClawModule.setSpeed(20);
+    
   }
 
 private:
@@ -78,8 +82,8 @@ public:
   , m_rightClawModule(rightClaw)
   {
     m_controller.analogBind(ANALOG::JOYSTICK1_Y, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setForwardChannel));
-    m_controller.analogBind(ANALOG::JOYSTICK2_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setYawChannel));
-    m_controller.analogBind(ANALOG::JOYSTICK1_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setStrafeChannel));
+    m_controller.analogBind(ANALOG::JOYSTICK1_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setYawChannel));
+    //m_controller.analogBind(ANALOG::JOYSTICK2_X, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::setStrafeChannel));
 
     m_controller.analogBind(ANALOG::GACHETTE_R, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftUp));
     m_controller.analogBind(ANALOG::GACHETTE_L, aex::Function<void(int8_t)>::bind<MainMode>(*this, &MainMode::moveLiftDown));
@@ -120,18 +124,18 @@ public:
 
     if(!m_isBraking) 
     {
-      m_holonomicDriveModule.move(m_forwardChannel, m_strafeChannel, m_yawChannel);
+      m_holonomicDriveModule.move(m_forwardChannel, m_yawChannel, m_strafeChannel);
     }
     else
     {
       if(m_forwardChannel > 0)
       { 
-        m_holonomicDriveModule.move(m_forwardChannel, m_strafeChannel, m_yawChannel);
+        m_holonomicDriveModule.move(m_forwardChannel, m_yawChannel, m_strafeChannel);
       }
       else
       {
         // not super smooth, but better than nothing...
-        m_holonomicDriveModule.move(20, m_strafeChannel, m_yawChannel); 
+        m_holonomicDriveModule.move(20, m_yawChannel, m_strafeChannel); 
       }
 
       if ((breakTime -= dt) <= 0.f)
@@ -160,8 +164,10 @@ public:
     if (m_clawPositionLeft < 0.0f) m_clawPositionLeft = 0.0f;
     else if (m_clawPositionLeft > 1.0f) m_clawPositionLeft = 1.0f;
 
-    m_leftClawModule.setSpeed(47 + static_cast<int8_t>(80.f * m_clawPositionLeft));
-    m_rightClawModule.setSpeed(-27 - static_cast<int8_t>(80.f * m_clawPositionRight));
+
+    m_leftClawModule.setSpeed(-20 + static_cast<int8_t>(147.f * m_clawPositionLeft));
+    m_rightClawModule.setSpeed(20 - static_cast<int8_t>(148.f * m_clawPositionRight));
+
 
     m_liftSpeed = 0;
     m_forwardChannel = 0;
@@ -225,7 +231,8 @@ public:
   {
     if (value)
     {
-      if (clawEncoder.getPosition() > -100)
+
+      //if (clawEncoder.getPosition() > -100)
       {
         m_clawRotation = -60;
       }
@@ -236,7 +243,7 @@ public:
   {
     if (value)
     {
-      if (clawEncoder.getPosition() < 400)
+      //if (clawEncoder.getPosition() < 400)
       {
         m_clawRotation = 60;
       }
@@ -278,6 +285,8 @@ unsigned long lastUpdateTime = 0;
 void setup() {
   CrcLib::Initialize();
 
+  //Serial.begin(9600);
+
   handleManager.addHandle(&frontLeftMotor);
   handleManager.addHandle(&frontRightMotor);
   handleManager.addHandle(&backLeftMotor);
@@ -287,6 +296,7 @@ void setup() {
   handleManager.addHandle(&clawMotor);
   handleManager.addHandle(&clawServoRight);
   handleManager.addHandle(&clawServoLeft);
+  //handleManager.addHandle(&clawEncoder);
 
   modeManager.changeMode(&idleMode);
 
